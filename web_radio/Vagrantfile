@@ -1,0 +1,94 @@
+### File di configurazione Vagrant 
+
+Vagrant.configure("2") do |config|
+
+  # VM basata su Debian 9
+  config.vm.box = "generic/debian9"
+  config.vm.box_version = "4.3.12"
+  
+  # assegnazione nome alla VM
+  config.vm.define "debian" do |debian|
+    debian.vm.box = "generic/debian9"
+  end
+
+  # mapping della porta 8000 della VM sulla porta 8000 dell'host 
+  config.vm.network "forwarded_port", guest: 8000, host: 8000
+
+  # (opzionale) assegnazione 1024 mb di ram 
+  config.vm.provider "virtualbox" do |vb|
+    vb.memory = "1024"
+  end
+
+  # Configurazione della macchina in modo che
+  # faccia tutto in modo automatico una volta avviata 
+  config.vm.provision "shell", inline: <<-SHELL
+    echo "Inizio configurazione web radio..."
+
+    # Nasconde tutte le domande e le richieste interattive durante l'installazione
+    export DEBIAN_FRONTEND=noninteractive
+
+    # Pre-configurazione password Icecast2
+    echo "icecast2 icecast2/icecast-setup boolean true" | debconf-set-selections
+    echo "icecast2 icecast2/admin-password password hackme" | debconf-set-selections 
+    echo "icecast2 icecast2/source-password password hackme" | debconf-set-selections 
+    echo "icecast2 icecast2/relay-password password hackme" | debconf-set-selections 
+
+    # Installazione pacchetti
+    apt-get update
+    apt-get install -y icecast2 ezstream ffmpeg wget
+
+    # Configurazione directory musicali
+    USER_HOME="/home/vagrant"
+    MUSIC_DIR="$USER_HOME/music"
+    mkdir -p "$MUSIC_DIR"
+
+    # Download e conversione traccia audio (FreeSWSong di Stallman)
+    echo "Scaricamento canzone FreeSWSong di Stallman..."
+    wget https://www.gnu.org/music/FreeSWSong.ogg -O "$MUSIC_DIR/FreeSWSong.ogg"
+    ffmpeg -y -i "$MUSIC_DIR/FreeSWSong.ogg" -b:a 192k "$MUSIC_DIR/FreeSWSong.mp3" 2> /dev/null
+
+    # Generazione playlist
+    find "$MUSIC_DIR" -name "*.mp3" > "$USER_HOME/playlist.txt"
+    
+    # Generazione file di configurazione Ezstream
+    cat <<-EOF > "$USER_HOME/ezstream.xml"
+	<?xml version="1.0" encoding="UTF-8" ?>
+	<ezstream>
+	  <url>http://localhost:8000/radio.mp3</url>
+	  <sourceuser>source</sourceuser>
+	  <sourcepassword>hackme</sourcepassword>
+	  <format>MP3</format>
+	  <filename>$USER_HOME/playlist.txt</filename>
+	  <stream_once>0</stream_once>
+	  <shuffle>0</shuffle>
+	</ezstream>
+	EOF
+
+    # Sistemazione permessi
+    chown -R vagrant:vagrant "$MUSIC_DIR" "$USER_HOME/playlist.txt" "$USER_HOME/ezstream.xml"
+
+    # Creazione del servizio Systemd per la radio
+    cat <<-EOF > /etc/systemd/system/ezstream-radio.service
+	[Unit]
+	Description=Ezstream Radio Service
+	After=icecast2.service
+	
+	[Service]
+	User=vagrant
+	ExecStart=/usr/bin/ezstream -c $USER_HOME/ezstream.xml
+	Restart=always
+
+	[Install]
+	WantedBy=multi-user.target
+	EOF
+
+    # Avvio e abilitazione dei servizi al boot
+    systemctl daemon-reload
+    systemctl enable icecast2
+    systemctl start icecast2
+    systemctl enable ezstream-radio
+    systemctl start ezstream-radio
+    
+    echo "Configurazione completata! La radio è in onda!!"
+  SHELL
+end
