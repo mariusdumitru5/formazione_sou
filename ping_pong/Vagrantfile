@@ -1,0 +1,51 @@
+Vagrant.configure("2") do |config|
+    
+    ## immagine di base
+    config.vm.box = "debian/bookworm64"
+    
+    # provider VirtualBox
+    config.vm.provider "virtualbox" do |vb|
+        vb.memory = "256"
+    end
+
+    ## container 1
+    config.vm.define "macchina1" do |macchina1|
+        macchina1.vm.hostname = "macchina1.test"
+        macchina1.vm.network :private_network, ip: "192.168.6.7" 
+        
+        ## provisioning macchina 1
+        macchina1.vm.provision "shell", inline:
+        <<-SHELL
+        ## scarico docker
+        apt install curl
+        curl -fsSL https://get.docker.com -o get-docker.sh
+        SHELL
+    end
+
+    ## container 2
+    config.vm.define "macchina2" do |macchina2|
+        macchina2.vm.hostname = "macchina2.test"
+        macchina2.vm.network :private_network, ip: "192.168.6.9" 
+
+        ## provisioning macchina 2
+        macchina1.vm.provision "shell", inline:
+        <<-SHELL
+        ## scarico docker 
+        apt install curl
+        curl -fsSL https://get.docker.com -o get-docker.sh
+        SHELL
+    end
+
+     ## Orchestratore
+    config.vm.define "orchestratore" do |orchestratore|
+        orchestratore.vm.hostname = "orchestratore.test"
+        orchestratore.vm.network :private_network, ip: "192.168.6.10" 
+
+        ## provisioning orchestratore 
+        macchina1.vm.provision "shell", inline:
+        <<-SHELL
+        echo "Hello World"
+        SHELL
+    end
+
+end
