@@ -1,51 +1,109 @@
-Vagrant.configure("2") do |config|
-    
+Vagrant.configure("2") do |config|    
     ## immagine di base
     config.vm.box = "debian/bookworm64"
     
-    # provider VirtualBox
+    # provider VirtualBox 
     config.vm.provider "virtualbox" do |vb|
-        vb.memory = "256"
+        vb.memory = "512"
     end
 
-    ## container 1
-    config.vm.define "macchina1" do |macchina1|
-        macchina1.vm.hostname = "macchina1.test"
-        macchina1.vm.network :private_network, ip: "192.168.6.7" 
-        
-        ## provisioning macchina 1
-        macchina1.vm.provision "shell", inline:
-        <<-SHELL
-        ## scarico docker
-        apt install curl
-        curl -fsSL https://get.docker.com -o get-docker.sh
-        SHELL
-    end
-
-    ## container 2
-    config.vm.define "macchina2" do |macchina2|
-        macchina2.vm.hostname = "macchina2.test"
-        macchina2.vm.network :private_network, ip: "192.168.6.9" 
-
-        ## provisioning macchina 2
-        macchina1.vm.provision "shell", inline:
-        <<-SHELL
-        ## scarico docker 
-        apt install curl
-        curl -fsSL https://get.docker.com -o get-docker.sh
-        SHELL
-    end
-
-     ## Orchestratore
+    ## 1. orchestratore (IP: 192.168.1.7)
     config.vm.define "orchestratore" do |orchestratore|
         orchestratore.vm.hostname = "orchestratore.test"
-        orchestratore.vm.network :private_network, ip: "192.168.6.10" 
+        orchestratore.vm.network :private_network, ip: "192.168.1.7" 
 
         ## provisioning orchestratore 
-        macchina1.vm.provision "shell", inline:
-        <<-SHELL
-        echo "Hello World"
+        orchestratore.vm.provision "shell", inline: <<-SHELL
+            # blocca gli aggiornamenti di GRUB per evitare schermate interattive
+            apt-mark hold grub-pc grub-pc-bin grub2-common 
+            
+            apt-get update && apt-get upgrade -y
+            
+            # genera la chiave ssh per l'utente vagrant se non esiste
+            if [ ! -f /home/vagrant/.ssh/id_ed25519 ]; then
+                sudo -u vagrant ssh-keygen -t ed25519 -N "" -f /home/vagrant/.ssh/id_ed25519
+            fi
+            
+            # disabilita StrictHostKeyChecking per evitare prompt interattivi durante la prima connessione SSH
+            cat <<EOF > /home/vagrant/.ssh/config
+            Host 192.168.1.*
+            StrictHostKeyChecking no
+            UserKnownHostsFile=/dev/null
+EOF
+            chown vagrant:vagrant /home/vagrant/.ssh/config
+            chmod 600 /home/vagrant/.ssh/config
+
+            # copia la chiave nella cartella condivisa di Vagrant (/vagrant) per distribuirla
+            cp /home/vagrant/.ssh/id_ed25519.pub /vagrant/orchestratore_id_ed25519.pub
+            echo "Chiave generata e condivisa!"
         SHELL
     end
 
+    ## 2. macchina 1 (IP: 192.168.1.5)
+    config.vm.define "macchina1" do |macchina1|
+        macchina1.vm.hostname = "macchina1.test"
+        macchina1.vm.network :private_network, ip: "192.168.1.5" 
+        
+        ## provisioning macchina 1
+        macchina1.vm.provision "shell", inline: <<-SHELL
+            # blocca gli aggiornamenti di GRUB per evitare schermate interattive
+            apt-mark hold grub-pc grub-pc-bin grub2-common 
+            
+            apt-get update && apt-get upgrade -y
+            apt-get install -y curl
+            curl -fsSL https://get.docker.com -o get-docker.sh
+            sh get-docker.sh
+            # permette all'utente vagrant di usare docker senza sudo
+            usermod -aG docker vagrant
+        SHELL
+
+        # automazione ssh: accetta la chiave dell'orchestratore non appena viene creata
+        macchina1.vm.provision "shell", run: "always", inline: <<-SHELL
+            if [ -f /vagrant/orchestratore_id_ed25519.pub ]; then
+                mkdir -p /home/vagrant/.ssh
+                # Evita di duplicare la chiave se è già presente
+                if ! grep -q -f /vagrant/orchestratore_id_ed25519.pub /home/vagrant/.ssh/authorized_keys 2>/dev/null; then
+                    cat /vagrant/orchestratore_id_ed25519.pub >> /home/vagrant/.ssh/authorized_keys
+                    echo "Chiave dell'orchestratore iniettata con successo su macchina1!"
+                fi
+                chown -R vagrant:vagrant /home/vagrant/.ssh
+                chmod 700 /home/vagrant/.ssh
+                chmod 600 /home/vagrant/.ssh/authorized_keys
+            fi
+        SHELL
+    end
+
+    ## 3. macchina 2 (IP: 192.168.1.6)
+    config.vm.define "macchina2" do |macchina2|
+        macchina2.vm.hostname = "macchina2.test"
+        macchina2.vm.network :private_network, ip: "192.168.1.6" 
+
+        ## provisioning macchina 2
+        macchina2.vm.provision "shell", inline: <<-SHELL
+            # blocca gli aggiornamenti di GRUB per evitare schermate interattive
+            apt-mark hold grub-pc grub-pc-bin grub2-common 
+
+            apt-get update && apt-get upgrade -y
+            apt-get install -y curl
+            curl -fsSL https://get.docker.com -o get-docker.sh
+            sh get-docker.sh
+            # permette all'utente vagrant di usare docker senza sudo
+            usermod -aG docker vagrant
+        SHELL
+
+        # automazione ssh: accetta la chiave dell'orchestratore non appena viene creata
+        macchina2.vm.provision "shell", run: "always", inline: <<-SHELL
+            if [ -f /vagrant/orchestratore_id_ed25519.pub ]; then
+                mkdir -p /home/vagrant/.ssh
+                # Evita di duplicare la chiave se è già presente
+                if ! grep -q -f /vagrant/orchestratore_id_ed25519.pub /home/vagrant/.ssh/authorized_keys 2>/dev/null; then
+                    cat /vagrant/orchestratore_id_ed25519.pub >> /home/vagrant/.ssh/authorized_keys
+                    echo "Chiave dell'orchestratore iniettata con successo su macchina2!"
+                fi
+                chown -R vagrant:vagrant /home/vagrant/.ssh
+                chmod 700 /home/vagrant/.ssh
+                chmod 600 /home/vagrant/.ssh/authorized_keys
+            fi
+        SHELL
+    end
 end
