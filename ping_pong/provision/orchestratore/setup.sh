@@ -1,3 +1,32 @@
+# evita blocchi interattivi con GRUB
+export DEBIAN_FRONTEND=noninteractive
+apt-mark hold grub-pc grub-pc-bin grub2-common grub-imagebuilder 2>/dev/null
+
+# update and upgrade del sistema 
+apt-get update && apt-get upgrade -y
+            
+# genera la chiave ssh per l'utente vagrant se non esiste
+if [ ! -f /home/vagrant/.ssh/id_ed25519 ]; then
+    sudo -u vagrant ssh-keygen -t ed25519 -N "" -f /home/vagrant/.ssh/id_ed25519
+fi
+            
+# disabilita StrictHostKeyChecking per evitare prompt interattivi durante la prima connessione SSH
+cat <<EOF > /home/vagrant/.ssh/config
+Host 192.168.1.*
+StrictHostKeyChecking no
+UserKnownHostsFile=/dev/null
+EOF
+# rido i permesi all'utente vagrant per il file di config
+chown vagrant:vagrant /home/vagrant/.ssh/config
+chmod 600 /home/vagrant/.ssh/config
+
+# copia la chiave nella cartella condivisa di Vagrant (/vagrant) per distribuirla
+cp /home/vagrant/.ssh/id_ed25519.pub /vagrant/orchestratore_id_ed25519.pub
+chown vagrant:vagrant /vagrant/orchestratore_id_ed25519.pub
+echo "Chiave generata e condivisa!"
+
+# script per far avviare il ping-pong
+cat <<'EOF' > /home/vagrant/play.sh
 #!/usr/bin/env bash
 #
 # Autore: Marius Dumitru
@@ -110,3 +139,10 @@ while true; do
         start_container $IP_VM2 "$NOME_MACCHINA_2" "PONG"
         echo " "
 done
+EOF
+
+
+# assegna il file a vagrant e lo rende eseguibile
+chown vagrant:vagrant /home/vagrant/play.sh
+chmod +x /home/vagrant/play.sh
+echo "Script play.sh pronto in /home/vagrant/play.sh!"

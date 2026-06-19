@@ -1,0 +1,4 @@
+.vagrant/
+*.log
+.DS_Store
+orchestratore_id_ed25519.pub
