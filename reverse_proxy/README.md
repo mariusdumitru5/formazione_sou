@@ -2,7 +2,8 @@
 ## Obiettivo
 L'obiettivo dell'esercizio è quello di creare un'architettura basata su tre macchine: una macchina che fa da `reverse proxy server`, che dirige il traffico verso altre due macchine che fanno da `server backend`. Lo smistamento del traffico deve avvenire in base ad un filtro(per esempio: `/accounts` va sulla macchina backend 1 e `/login` che va sulla macchina backend 2). E' richiesto inoltre che il client comunichi con il server proxy tramite `https`, mentre la comunicazione server proxy - server backend deve avvenire tramite `http`. Per questo motivo è richiesto anche creare un certificato e autofirmarlo.
 ## Architettura
-![Architettura](imgs/architettura_reverse_proxy.png)
+![Architettura Reverse Proxy](imgs/architettura_reverse_proxy.png)
+
 In questa architettura il client fa una richiesta `https` al server reverse proxy(`1`). 
 - Se il client cerca `https://192.168.1.10:443/accounts/` il server proxy inoltra la richiesta tramite `http `al server backend 1(`2`).
 - Se il client cerca `https://192.168.1.10:443/login/` il server proxy inoltra la richiesta tramite `http `al server backend 2.
