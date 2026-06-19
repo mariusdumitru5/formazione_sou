@@ -1,0 +1,40 @@
+Vagrant.configure("2") do |config|    
+    ## immagine di base
+    config.vm.box = "debian/bookworm64"
+    
+    # provider VirtualBox, ogni Vm avrà 512 MB di RAM
+    config.vm.provider "virtualbox" do |vb|
+        vb.memory = "512"
+    end
+
+    ## 1. reverse proxy (IP: 192.168.1.10)
+    config.vm.define "proxy-server" do |proxy|
+        proxy.vm.hostname = "proxy"
+        proxy.vm.network :private_network, ip: "192.168.1.10" 
+        # porta per http --> per vedere il sito tramite browser dall'host
+        proxy.vm.network "forwarded_port", guest: 80, host: 8080, id: "http-proxy"
+        # porta PER https
+        proxy.vm.network "forwarded_port", guest: 443, host: 8443, id: "https-proxy"
+
+        # provisioning con shell
+        proxy.vm.provision "shell", path: "provision/proxy/setup.sh"
+    end
+
+    ## 2. macchina 1 (IP: 192.168.1.11)
+    config.vm.define "backend-srv-1" do |srv1|
+       srv1.vm.hostname = "backend-srv-1"
+       srv1.vm.network :private_network, ip: "192.168.1.11" 
+       
+       # provisioning con shell
+       srv1.vm.provision "shell", path: "provision/backend/setup.sh"
+    end
+
+    ## 3. macchina 2 (IP: 192.168.1.12)
+    config.vm.define "backend-srv-2" do |srv2|
+       srv2.vm.hostname = "backend-srv-2"
+       srv2.vm.network :private_network, ip: "192.168.1.12" 
+       
+       # provisioning con shell
+       srv2.vm.provision "shell", path: "provision/backend/setup.sh"
+    end
+end
