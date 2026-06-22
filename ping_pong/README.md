@@ -9,7 +9,7 @@ between PING and PONG.
 
 The infrastructure consists of three **Debian** virtual machines:
 <p align="center">
-   <img src="../imgs/ping-pong.png" width="300" height="300" alt="Architettura">
+   <img src="../imgs/ping-pong.png" width="550" height="550" alt="Architettura">
 </p>
 
 The virtual machines are managed via **Vagrant** using **VirtualBox** as the provider. Vagrant creates a private virtual network (`192.168.1.0/24`) through which the three machines communicate. The two nodes do not communicate directly with each other; instead, the orchestrator starts and stops the Docker containers to make the two machines alternate.
