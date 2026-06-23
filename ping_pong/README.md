@@ -95,7 +95,7 @@ ssh vagrant@192.168.1.5
 ssh vagrant@192.168.1.6
 ```
 
-## The play.sh Script
+## The play.sh Script
 
 `play.sh` is the heart of the project.
 
