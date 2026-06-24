@@ -6,15 +6,15 @@ GREEN='\033[0;32m'
 RESET='\033[0m' 
 
 ### IP classes regex
-# class A (0.0.0.0 - 127.255.255.2555)
+# class A (0.0.0.0 - 127.255.255.255)
 A="^([0-9]|[1-9][0-9]|1[0-2][0-7])(\.(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])){3}$"
-# class B (128.0.0.0 - 191.255.255.2555)
+# class B (128.0.0.0 - 191.255.255.255)
 B="^(12[8-9]|1[3-8][0-9]|19[0-1])(\.(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])){3}$"
-# class C (192.0.0.0 - 223.255.255.2555)
+# class C (192.0.0.0 - 223.255.255.255)
 C="^(19[2-9]|2[0-1][0-9]|22[0-3])(\.(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])){3}$"
-# class D (224.0.0.0 - 239.255.255.2555)
+# class D (224.0.0.0 - 239.255.255.255)
 D="^(22[4-9]|23[0-9])(\.(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])){3}$"
-# class E (240.0.0.0 - 255.255.255.2555)
+# class E (240.0.0.0 - 255.255.255.255)
 E="^(24[0-9]|25[0-5])(\.(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])){3}$"
 
 ### Private IP classes
@@ -68,25 +68,34 @@ to_dotted(){
 get_netInfo(){
 	
 	# divide the ip and the mask
-	to_cidr "$MASK" 
+	to_dotted "$MASK"
+
 	IFS=. read -r i1 i2 i3 i4 <<< "$IP"
-        IFS=. read -r m1 m2 m3 m4 <<< "$MASK_DECIMAL"
+    IFS=. read -r m1 m2 m3 m4 <<< "$MASK_DECIMAL"
 	
 	# logic and between each octet
-        net1=$((i1 & m1))
-        net2=$((i2 & m2))
-        net3=$((i3 & m3))
-        net4=$((i4 & m4))
-        NET_ID="$net1.$net2.$net3.$net4"
+    net1=$((i1 & m1))
+    net2=$((i2 & m2))
+    net3=$((i3 & m3))
+    net4=$((i4 & m4))
+    NET_ID="$net1.$net2.$net3.$net4"
 
 	b1=$(( i1 | (255 - m1) ))
    	b2=$(( i2 | (255 - m2) ))
-    	b3=$(( i3 | (255 - m3) ))
-    	b4=$(( i4 | (255 - m4) ))
-    	BADDR="$b1.$b2.$b3.$b4"
+    b3=$(( i3 | (255 - m3) ))
+    b4=$(( i4 | (255 - m4) ))
+    BADDR="$b1.$b2.$b3.$b4"
 
-    	FIRST_HOST="$net1.$net2.$net3.$((net4 + 1))"
-    	LAST_HOST="$b1.$b2.$b3.$((b4 - 1))"			
+    FIRST_HOST="$net1.$net2.$net3.$((net4 + 1))"
+    LAST_HOST="$b1.$b2.$b3.$((b4 - 1))"		
+
+    if ((MASK == 31)); then
+        FIRST_HOST="IP"
+        LAST_HOST="$IP"
+    elif ((MASK == 32))
+        FIRST_HOST="0"
+        LAST_HOST="0"		
+    fi	
 }
 
 # 
@@ -114,7 +123,7 @@ while true; do
             shift 2
             ;;
         -h|--help)
-            echo "Usage: $0 [-i|--ip IP_ADDRESS] [-m|--mask SUBNET_MASK]"
+            echo "Usage: $0 [-i|--ip IP_ADDRESS] [-m|--mask CIDR_SUBNET_MASK(0 - 32)]"
             exit 0
             ;;
         --)
@@ -131,11 +140,11 @@ done
 # check if the ip is empty
 if [[ -z "$IP" ]]; then
     echo "Error: The --ip (or -i) option is mandatory."
-    echo "Usage: $0 -i <IP_ADDRESS> [-m <SUBNET_MASK>]"
+    echo "Usage: $0 -i <IP_ADDRESS> [-m CIDR_SUBNET_MASK(0 - 32)]"
     exit 1
 fi
 
-# gey ip type
+# get ip type
 if [[ "$IP" =~ $AP || "$IP" =~ $BP || "$IP" =~ $CP ]]; then
     TYPE="Private"
 elif [[ "$IP" =~ $LOOPBACK ]]; then
