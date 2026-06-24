@@ -52,6 +52,7 @@ FIRST_HOST=""
 # last host
 LAST_HOST=""
 
+# convert cidr mask to decimal dotted notation
 to_dotted(){
     local cidr="$1"
     
@@ -61,6 +62,7 @@ to_dotted(){
     fi
 
     local mask=$(( (0xffffffff << (32 - cidr)) & 0xffffffff ))
+    # format the output 
     MASK_DECIMAL="$((mask>>24 & 255)).$((mask>>16 & 255)).$((mask>>8 & 255)).$((mask & 255))"
 }
 
@@ -88,6 +90,7 @@ get_netInfo(){
     b4=$(( i4 | (255 - m4) ))
     BADDR="$b1.$b2.$b3.$b4"
 
+    # handle /31 and /32 mask cases
     if ((MASK == 31)); then
         FIRST_HOST="$NET_ID"
         LAST_HOST="$BADDR"
@@ -96,7 +99,7 @@ get_netInfo(){
         LAST_HOST="$NET_ID"
     else		
     	FIRST_HOST="$net1.$net2.$net3.$((net4 + 1))"
-   	LAST_HOST="$b1.$b2.$b3.$((b4 - 1))"		
+   	    LAST_HOST="$b1.$b2.$b3.$((b4 - 1))"		
     fi	
 }
 
