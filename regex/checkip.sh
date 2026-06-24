@@ -33,6 +33,8 @@ LOOPBACK="^127(\.(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])){3}$"
 # limited broadcast (255.255.255.255)
 BROADCAST="^255\.255\.255\.255$"
 
+# dottet mask
+MASK_DECIMAL=""
 # net mask 
 MASK=""
 # ip
@@ -86,15 +88,15 @@ get_netInfo(){
     b4=$(( i4 | (255 - m4) ))
     BADDR="$b1.$b2.$b3.$b4"
 
-    FIRST_HOST="$net1.$net2.$net3.$((net4 + 1))"
-    LAST_HOST="$b1.$b2.$b3.$((b4 - 1))"		
-
     if ((MASK == 31)); then
-        FIRST_HOST="IP"
-        LAST_HOST="$IP"
-    elif ((MASK == 32))
-        FIRST_HOST="0"
-        LAST_HOST="0"		
+        FIRST_HOST="$NET_ID"
+        LAST_HOST="$BADDR"
+    elif ((MASK == 32)); then
+        FIRST_HOST="$NET_ID"
+        LAST_HOST="$NET_ID"
+    else		
+    	FIRST_HOST="$net1.$net2.$net3.$((net4 + 1))"
+   	LAST_HOST="$b1.$b2.$b3.$((b4 - 1))"		
     fi	
 }
 
@@ -176,10 +178,19 @@ if [[ -n "$CLASS" ]]; then
    #check if the mask is defined
     if [[ -n "$MASK" ]]; then
 	get_netInfo
-        printf "${GREEN}[+] Netmask    : %s${RESET}\n" "$MASK"
-        printf "${GREEN}[+] NetID      : %s${RESET}\n" "$NET_ID"
-        printf "${GREEN}[+] Broadcast  : %s${RESET}\n" "$BADDR"
-        printf "${GREEN}[+] Host range : from %s to %s${RESET}\n" "$FIRST_HOST" "$LAST_HOST"
+	if [[ "$MASK" -eq 32 ]]; then
+		printf "${GREEN}[+] Netmask    : %s${RESET}\n" "$MASK_DECIMAL"
+        	printf "${GREEN}[+] Host range : single host(%s)${RESET}\n" "$FIRST_HOST"
+	elif [[ "$MASK" -eq 31 ]]; then
+		printf "${GREEN}[+] Netmask    : %s${RESET}\n" "$MASK_DECIMAL"
+       		printf "${GREEN}[+] NetID      : %s${RESET}\n" "$NET_ID"
+        	printf "${GREEN}[+] Host range : point-to-point: %s to %s${RESET}\n" "$FIRST_HOST" "$LAST_HOST"
+	else
+		printf "${GREEN}[+] Netmask    : %s${RESET}\n" "$MASK_DECIMAL"
+        	printf "${GREEN}[+] NetID      : %s${RESET}\n" "$NET_ID"
+        	printf "${GREEN}[+] Broadcast  : %s${RESET}\n" "$BADDR"
+        	printf "${GREEN}[+] Host range : from %s to %s${RESET}\n" "$FIRST_HOST" "$LAST_HOST"
+	fi
 	
     fi
    
