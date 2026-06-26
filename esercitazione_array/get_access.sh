@@ -22,7 +22,7 @@ declare -A ips
 while IFS= read -r ip; do
 	# se l'ip non è nella lista lo aggiunge come chiave
 	# e poi imposta il valore a uno
-	# -v guarda se la variabile o la chiave e definita 
+	# -v guarda se la variabile o la chiave è definita 
 	if ! [[ -v ips["$ip"] ]]; then
 		((ips["$ip"] = 1))
 	else 
