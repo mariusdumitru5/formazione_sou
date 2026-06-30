@@ -10,9 +10,9 @@ RESET='\033[0m'
 show_usage(){
 	printf "${YELLOW}Usage: $0 -i IP_ADDRESS -p PORT_RANGE\n"
 	printf "Options:\n"
-    	printf "  -i, --ip          Specify the IP address\n"
-    	printf "  -p          	    Specify a port on the host\n"
-    	printf "  --port-range      Specify the port range (e.g., 20-80)${RESET}\n"
+    printf "  -i, --ip          Specify the IP address\n"
+    printf "  -p          	    Specify a port on the host\n"
+    printf "  --port-range      Specify the port range (e.g., 20-80)${RESET}\n"
 }
 
 # verifico che non vengano passati troppi argomenti
@@ -85,6 +85,7 @@ if [[ -n "$PORT" ]]; then
 	START_PORT=$PORT
 	END_PORT=$PORT
 else
+	# verifico se il range è nel formato giusto
 	if [[ ! "$RANGE" =~ ^[0-9]+-[0-9]+$ ]]; then
 		printf "${RED}Error: Invalid port range format. Use 'START-END' (e.g., 20-80).${RESET}\n"
 		exit 1
@@ -94,12 +95,14 @@ else
 	IFS=- read -r START_PORT END_PORT <<< "$RANGE"
 fi
 
+# controllo che START_PORT e END_PORT siano interi positivi
 if ! [[ "$START_PORT" =~ ^[0-9]+$ && "$END_PORT" =~ ^[0-9]+$ ]]; then
 	printf "${RED}Error: Invalid port range${RESET}\n"
 	printf "${RED}Ports must be positive numbers${RESET}\n"
 	exit 1
 fi
 
+# controllo sul numero di porta 
 if (( START_PORT < 1 || START_PORT > 65535 || END_PORT < 1 || END_PORT > 65535 )); then
     printf "${RED}Error: Ports must be between 1 and 65535.${RESET}\n"
     exit 1
@@ -119,14 +122,11 @@ for ((i = START_PORT; i <= END_PORT; i++ )); do
 	nc -n -w 1 "$IP" "$i" &> /dev/null
 
 	if [[ "$?" -eq  0 ]]; then
-		#echo "Port $i: Open"
 		STATUS="${GREEN}OPEN${RESET}"
 	else
-	   	#echo "Port $i: Close"
 		STATUS="${RED}CLOSE${RESET}"
 	fi
 	printf "%-12s | %-12b\n" "$i" "$STATUS"
 
 done
 echo "----------------------------------------"
-
