@@ -188,3 +188,22 @@ In particolare, al comando vengono passati i parametri:
 Per capire se una porta è aperta o chiusa basta quindi leggere il codice di uscita del comando. Per questo motivo possiamo ignorare il suo output(`&> /dev/null`).
 
 Per il codice di uscita basta leggere la variabile `$?`. 
+
+
+### Nota Teorica sul UDP
+
+Dato che l'UDP è `stateless` e non utilizza la `three-way handshake` è dificile capire se una porta è `aperta` o `filtrata`(bloccata dal firewall) sull'host. 
+
+#### Porta Chiusa
+
+Quando si invia un pacchetto UDP a una porta chiusa, il server remoto non ha un servizio attivo per gestirlo. Il sistema operativo del server si accorge di questo e risponde inviando indietro un pacchetto speciale di errore tramite un altro protocollo detto l'`ICMP`(Internet Control Message Protocol). 
+
+Il messaggio inviato è `Destination Unreachable (Port Unreachable)`.
+
+A questo punto `nc`  capisce che la porta è chiusa e restituisce un codice di errore `$?` diverso da `0`. Quindi so con certezza che la porta è chiusa. 
+
+#### Porta Aperta/Filtrata
+
+Se la porta UDP è aperta, l'applicazione remota riceve il pacchetto. Se il pacchetto non contiene una richiesta formattata esattamente come l'applicazione si aspetta, l'applicazione semplicemente lo ignora e non risponde. Se la porta UDP è filtrata da un firewall, il firewall scarta il pacchetto (regola `DROP`) e non risponde.
+
+In entrambi i casi `nc` manderà il pacchetto, aspetterà lo scadere del timeout `(-w 1)`, ma non riceverà il messaggio `ICMP` di "Porta non raggiungibile", quindi considererà la porta come potenzialmente aperta. 
