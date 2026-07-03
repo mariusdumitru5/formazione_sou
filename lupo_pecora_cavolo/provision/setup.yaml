@@ -1,0 +1,29 @@
+---
+- hosts: all
+  become: true
+  tasks:
+    - name: Aggiorna paccetti 
+      ansible.builtin.apt:
+        update_cache: yes
+    - name: Scarica script per installare docker
+      ansible.builtin.get_url:
+        url: "https://get.docker.com"
+        dest: "/tmp/get-docker.sh"
+        mode: "0755"
+    - name: Esegui script get-docker.sh come utente root
+      ansible.builtin.shell: "/tmp/get-docker.sh"
+    - name: Abilita il demone di docker 
+      ansible.builtin.systemd:
+        name: docker
+        state: started
+        enabled: yes 
+    - name: Aggiungi utente vagrant al gruppo docker 
+      ansible.builtin.user:
+        name: vagrant 
+        groups: docker 
+        append: yes
+    - name: Copia script play.sh sulla macchina
+      ansible.builtin.copy:
+        src: "play.sh"
+        dest: "/home/vagrant/play.sh" 
+        mode: "0755"
