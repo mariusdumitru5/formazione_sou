@@ -72,10 +72,57 @@ Gli elementi caratteristici del problema si possono rappresentare in vari modi a
 
 ##### Rappresentazione grafica
 
-<img src="../imgs/lpc2.png" width="300"  alt="Sitazione Iniziale"> 
------------------------------------------
-<img src="../imgs/lpc3.png" width="300">
+<img src="../imgs/lpc2.png" width="500"  alt="Sitazione Iniziale"> 
+<img src="../imgs/lpc3.png" width="500">
 
 Nella situazione iniziale, i container `Contadino, Pecora, Lupo e Cavolo` si trovano tutti sulla stessa rete, in questo modo si possono vedere tutti tra di loro. Quando il container `Contadino`(blu) si sposta insieme ad un container verde, cioè ad un altro attore, questi passano su un'altra rete Docker. In questo modo, dato che la rete è separata, i container di una sponda non vedranno i container dell'altra. 
 
 Per applicare i vincoli, quando due attori coinvolti nel vincolo si trovano nella stesse rete e il container contadino non è presente, allora il vincolo verrà applicato e in base alla circostanza il cavolo o la pecora veranno mangiati. Essere mangiati corrisponde al fermare i container e a perdere il gioco. 
+
+
+# Implementazione 
+
+Tutta la logica del gioco si trova all'interno del file `play.sh`. 
+Lo script è suddiviso in varie funzioni che hanno lo scopo di rendere tutto modulare e facile da gestire.
+
+### Gestione del Gioco e della Logica
+
+##### `game_action`
+
+È il cuore della logica interattiva. Riceve l'input dell'utente, richiama le funzioni di validazione e orchestra lo spostamento. Gestisce inoltre l'aggiornamento della variabile `SPONDA_CORRENTE` e invoca i controlli per decretare la vittoria o la sconfitta.
+
+##### `sposta_personaggi`
+
+Esegue l'azione fisica sui container. Utilizza i comandi `docker network disconnect` e `docker network connect` per spostare il container del contadino (che si muove sempre) e l'eventuale container dell'attore selezionato dalla rete di origine a quella di destinazione.
+
+##### `controlla_vincoli`
+
+Analizza i container presenti sulla sponda dove il contadino non si trova. Se rileva la combinazione "lupo e pecora" o "pecora e cavolo" sulla stessa rete, allora è Game Over.
+
+##### `controlla_vittoria`
+
+Verifica la condizione di successo. Conta quanti container sono connessi alla rete sponda_destra; se il totale è esattamente 4, stampa il messaggio di vittoria.
+
+### Helper e Validazione
+
+##### `validate_input`
+
+Riceve il tipo di input da controllare (actor o action) e la stringa digitata dall'utente. Assicura che si possano muovere solo i 4 attori previsti e che le uniche direzioni ammesse siano "destra" o "sinistra".
+
+##### `prendi_sponda`
+
+Interroga Docker tramite `docker inspect` per scoprire a quale rete (sponda sinistra o destra) è attualmente collegato un determinato container.
+
+##### `verifica_presenza_contadino`
+
+Controlla che il contadino sia fisicamente sulla stessa sponda dell'oggetto che l'utente vuole spostare. Impeadisce al giocatore di teletrasportare un oggetto dall'altra parte del fiume!
+
+### Interfaccia Utente
+
+##### `mostra_regole`
+
+Pulisce lo schermo e stampa le istruzioni del gioco, le regole di sopravvivenza e la sintassi dei comandi.
+
+##### `disegna_fiume`
+
+Usa docker `network inspect` su entrambe le sponde per recuperare la lista dei container presenti. Stampa poi una tabella visuale aggiornata in tempo reale, mostrando da quale parte del "fiume" si trovano i vari attori.
