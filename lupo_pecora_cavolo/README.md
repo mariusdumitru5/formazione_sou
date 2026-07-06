@@ -72,8 +72,8 @@ Gli elementi caratteristici del problema si possono rappresentare in vari modi a
 
 ##### Rappresentazione grafica
 
-<img src="../imgs/lpc2.png" width="500"  alt="Sitazione Iniziale"> 
-<img src="../imgs/lpc3.png" width="500">
+<img src="../imgs/lpc2.png" width="350"  alt="Sitazione Iniziale"> 
+<img src="../imgs/lpc3.png" width="350">
 
 Nella situazione iniziale, i container `Contadino, Pecora, Lupo e Cavolo` si trovano tutti sulla stessa rete, in questo modo si possono vedere tutti tra di loro. Quando il container `Contadino`(blu) si sposta insieme ad un container verde, cioè ad un altro attore, questi passano su un'altra rete Docker. In questo modo, dato che la rete è separata, i container di una sponda non vedranno i container dell'altra. 
 
@@ -275,3 +275,27 @@ fi
 # stampa la riga per l'attore corrente
 printf "%-18s ${BLUE}~~~~~~~~~${RESET} %-18s\n" "$str_sinistra" "$str_destra"
 ```
+
+# Docker
+
+Docker gioca un ruolo centrale in questa architettura.
+
+### Creazione rete
+
+Per la creazione delle due reti è stato utilizzato il comando:
+
+```bash
+docker network create "sponda_sinistra" 
+```
+
+Questo comando crea una rete di tipo `bridge`. La rete di tipo bridge permette di isolare i container esterni e facilita la comunicazione tra i container sulla rete attraverso la risoluzione DNS automatica.
+
+### Creazione container
+
+Per creare i container è stato utilizzato il comando: 
+
+```bash
+docker run -d --name "$CONTADINO" --network "$SPONDA_1" alpine sleep infinity
+```
+
+Questo comando avvia il container con il nome `$CONTADINO` e lo mette sulla rete `SPONDA_1`. L'immagine che viene utilizzata è `alpine`, un'immagine che pesa cira 5 MB. Normalmente un container gira finché il suo processo principale è attivo. In questo caso, l'alpine fa si spegne subito perché non ha un processo principale. Per questo motivo viene passato il comando `sleep infinity`, per farli rimanere attivo all'infinito, finché non sarà l'utente a fermarlo.  

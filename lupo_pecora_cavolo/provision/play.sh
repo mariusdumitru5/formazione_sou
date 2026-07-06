@@ -171,9 +171,6 @@ controlla_vittoria() {
     # devo contare quanti attori sono sulla sponda_destra
     local conteggio_destra=$(docker network inspect "$SPONDA_2" --format '{{range .Containers}}{{.Name}} {{end}}' 2>/dev/null | wc -w)
 
-    # filtro per togliere gli spazi bianchi
-    conteggio_destra=$(echo "$conteggio_destra" | tr -d ' ')
-
     # se tutti i container sono sulla sponda_destra, allora vittoria!!
     if [[ "$conteggio_destra" -eq 4 ]]; then
         printf "${GREEN}\n=================================================${RESET}\n"
@@ -320,6 +317,6 @@ while true; do
 done
 
 printf "${RED}\n=================== GAME OVER ===================${RESET}\n"
-printf "${RED}Non hai aiutato il contadino a finire il suo lavoro{RESET}\n" "$sponda_da_controllare"
+printf "${RED}Non hai aiutato il contadino a finire il suo lavoro${RESET}\n" "$sponda_da_controllare"
 printf "${RED}La pecora ha mangiato il cavolo poi è stata mangiata dal lupo.${RESET}\n"
 printf "${RED}=================================================${RESET}\n\n"
