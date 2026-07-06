@@ -57,9 +57,9 @@ validate_input(){
         if [[ "$type" == "actor" ]]; then
             case "$input" in
                 lupo|pecora|cavolo|contadino)
-                    return 0 ;; # Ritorna successo senza stampare nulla
+                    return 0 ;; # ritorna successo senza stampare nulla
                 *)
-                    return 1 ;; # Input non valido
+                    return 1 ;; # input non valido
             esac
         fi
 
@@ -71,7 +71,6 @@ validate_input(){
                     return 1 ;;
             esac
         fi
-
 }
 
 # funzione per trovare la rete alla quale un container è collegato
@@ -268,17 +267,17 @@ disegna_fiume() {
         local str_sinistra=" "
         local str_destra=" "
 
-        # Verifica se l'attore è a sinistra
+        # verifica se l'attore è a sinistra
         if echo "$elementi_sinistra" | grep -qw "$attore"; then
             str_sinistra="$attore"
         fi
 
-        # Verifica se l'attore è a destra
+        # verifica se l'attore è a destra
         if echo "$elementi_destra" | grep -qw "$attore"; then
             str_destra="$attore"
         fi
 
-        # Stampa la riga per l'attore corrente
+        # stampa la riga per l'attore corrente
         printf "%-18s ${BLUE}~~~~~~~~~${RESET} %-18s\n" "$str_sinistra" "$str_destra"
     done
     printf "${BLUE}=================================================${RESET}\n\n"
@@ -317,7 +316,10 @@ while true; do
     fi
     game_action "$input"
 
-    sleep 0.1
+    sleep 1
 done
 
-printf "${RED}Ciao, LOSER!${RESET}\n"
+printf "${RED}\n=================== GAME OVER ===================${RESET}\n"
+printf "${RED}Non hai aiutato il contadino a finire il suo lavoro{RESET}\n" "$sponda_da_controllare"
+printf "${RED}La pecora ha mangiato il cavolo poi è stata mangiata dal lupo.${RESET}\n"
+printf "${RED}=================================================${RESET}\n\n"

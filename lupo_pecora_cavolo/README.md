@@ -85,23 +85,121 @@ Per applicare i vincoli, quando due attori coinvolti nel vincolo si trovano nell
 Tutta la logica del gioco si trova all'interno del file `play.sh`. 
 Lo script è suddiviso in varie funzioni che hanno lo scopo di rendere tutto modulare e facile da gestire.
 
+### Gameloop 
+
+Per far diventare tutto interattivo c'è bisogno di un `gameloop`, cioè di un ciclo che possa leggere l'input dell'utente.
+
+```bash
+while true; do
+   clear
+   disegna_fiume
+   read -p "$(printf "${BLUE}<%s>${RESET}: " "$SPONDA_CORRENTE")" input
+   if [[ "$input" == "exit" ]]; then
+      break
+   fi
+   game_action "$input"
+   sleep 1
+done
+```
+
+Ad ogni iterazione del ciclo(cioè una volta al secondo), viene pulito lo schermo, disegnato il fiume con la posizion e corrente degli attori e viene letto l'input dell'utente. Se viene passato il comando `exit` significa che l'utente si è arreso quindi ha perso. 
+
 ### Gestione del Gioco e della Logica
 
 ##### `game_action`
 
 È il cuore della logica interattiva. Riceve l'input dell'utente, richiama le funzioni di validazione e orchestra lo spostamento. Gestisce inoltre l'aggiornamento della variabile `SPONDA_CORRENTE` e invoca i controlli per decretare la vittoria o la sconfitta.
 
+```bash
+# verifica validità attore
+if ! validate_input "actor" "$actor"; then
+   printf "${RED}Errore: Il personaggio '%s' non esiste!${RESET}\n" "$actor"
+   return 1 
+fi 
+...
+# verifica presenza contadino
+if ! verifica_presenza_contadino "$actor"; then
+    printf "${RED}Errore: Il contadino non può muovere ' %s' perché si trova sull'altra sponda!${RESET}\n" "$actor"
+    return 1
+fi 
+...
+# aggiorno la sponda corrente 
+if [[ "$action" == "destra" ]]; then
+    SPONDA_CORRENTE="$SPONDA_2"
+else
+    SPONDA_CORRENTE="$SPONDA_1"
+fi
+...
+if ! controlla_vincoli; then
+    # game over, pulisco i container ed usco dallo script
+    printf "${YELLOW}Termino i container e chiudo il gioco...${RESET}\n"
+    docker rm -f "$CONTADINO" "$LUPO" "$PECORA" "$CAVOLO" > /dev/null 2>&1 || true
+    exit 1 # termino lo script
+fi
+
+# controllo se ho vinto
+if controlla_vittoria; then
+    printf "${YELLOW}Pulizia dei container in corso...${RESET}\n"
+    docker rm -f "$CONTADINO" "$LUPO" "$PECORA" "$CAVOLO" > /dev/null 2>&1 || true
+    exit 0 # Chiude lo script con successo
+fi
+```
+
 ##### `sposta_personaggi`
 
 Esegue l'azione fisica sui container. Utilizza i comandi `docker network disconnect` e `docker network connect` per spostare il container del contadino (che si muove sempre) e l'eventuale container dell'attore selezionato dalla rete di origine a quella di destinazione.
+
+```bash
+ # sposto il contadino, lui si sposta sempre anche con gli altri
+docker network disconnect "$origine" "$CONTADINO" 2> /dev/null
+docker network connect "$destinazione" "$CONTADINO" 2> /dev/nul
+
+# sposto un personaggio diverso dal contadino 
+if [[ "$actor" != "$CONTADINO" ]]; then
+    docker network disconnect "$origine" "$actor" 2> /dev/null
+    docker network connect "$destinazione" "$actor" 2> /dev/null
+    printf "${GREEN}Trasportato con successo: %s e %s sulla %s!${RESET}\n" "$CONTADINO" "$actor" "$destinazione"
+else
+    printf "${GREEN}Trasportato con successo: %s sulla %s!${RESET}\n" "$CONTADINO" "$destinazione"
+fi
+```
 
 ##### `controlla_vincoli`
 
 Analizza i container presenti sulla sponda dove il contadino non si trova. Se rileva la combinazione "lupo e pecora" o "pecora e cavolo" sulla stessa rete, allora è Game Over.
 
+```bash
+if echo "$elementi_sponda" | grep -q "$LUPO" && echo "$elementi_sponda" | grep -q "$PECORA"; then
+   printf "${RED}\n=================== GAME OVER ===================${RESET}\n"
+   printf "${RED}Hai lasciato il lupo e la pecora da soli sulla %s!${RESET}\n" "$sponda_da_controllare"
+   printf "${RED}Il lupo ha divorato la pecora.${RESET}\n"
+   printf "${RED}=================================================${RESET}\n\n"
+   return 1 # sconfitta
+fi
+
+# vincolo 2: pecora e cavolo sulla stessa sponda 
+if echo "$elementi_sponda" | grep -q "$PECORA" && echo "$elementi_sponda" | grep -q "$CAVOLO"; then
+    printf "${RED}\n=================== GAME OVER ===================${RESET}\n"
+    printf "${RED}Hai lasciato la pecora e il cavolo da soli sulla %s!${RESET}\n" "$sponda_da_controllare"
+    printf "${RED}La pecora ha mangiato il cavolo.${RESET}\n"
+    printf "${RED}=================================================${RESET}\n\n"
+    return 1 # sconfitta
+fi
+```
+
 ##### `controlla_vittoria`
 
 Verifica la condizione di successo. Conta quanti container sono connessi alla rete sponda_destra; se il totale è esattamente 4, stampa il messaggio di vittoria.
+
+```bash
+if [[ "$conteggio_destra" -eq 4 ]]; then
+   printf "${GREEN}\n=================================================${RESET}\n"
+   printf "${GREEN}          CONGRATULAZIONI! HAI VINTO!         ${RESET}\n"
+   printf "${GREEN} Sei riuscito a portare tutti in salvo a destra! ${RESET}\n"
+   printf "${GREEN}=================================================${RESET}\n\n"
+   return 0 # vittoria 
+fi
+```
 
 ### Helper e Validazione
 
@@ -109,13 +207,45 @@ Verifica la condizione di successo. Conta quanti container sono connessi alla re
 
 Riceve il tipo di input da controllare (actor o action) e la stringa digitata dall'utente. Assicura che si possano muovere solo i 4 attori previsti e che le uniche direzioni ammesse siano "destra" o "sinistra".
 
+```bash
+ if [[ "$type" == "actor" ]]; then
+      case "$input" in
+            lupo|pecora|cavolo|contadino)
+               return 0 ;; # ritorna successo senza stampare nulla
+            *)
+               return 1 ;; # input non valido
+      esac
+fi
+
+if [[ "$type" == "action" ]]; then
+      case "$input" in
+            destra|sinistra)
+               return 0 ;;
+            *)
+               return 1 ;;
+      esac
+fi
+```
+
 ##### `prendi_sponda`
 
 Interroga Docker tramite `docker inspect` per scoprire a quale rete (sponda sinistra o destra) è attualmente collegato un determinato container.
 
+```bash
+docker inspect "$container_name" --format='{{range $net, $conf := .NetworkSettings.Networks}}{{$net}}{{end}}' 2> /dev/null
+```
+
 ##### `verifica_presenza_contadino`
 
 Controlla che il contadino sia fisicamente sulla stessa sponda dell'oggetto che l'utente vuole spostare. Impeadisce al giocatore di teletrasportare un oggetto dall'altra parte del fiume!
+
+```bash
+if [[ "$sponda_attore" == "$SPONDA_CORRENTE" ]]; then
+      return 0 # sono insieme
+else
+      return 1 # il contadino è dall'altra parte
+fi
+```
 
 ### Interfaccia Utente
 
@@ -125,4 +255,23 @@ Pulisce lo schermo e stampa le istruzioni del gioco, le regole di sopravvivenza 
 
 ##### `disegna_fiume`
 
-Usa docker `network inspect` su entrambe le sponde per recuperare la lista dei container presenti. Stampa poi una tabella visuale aggiornata in tempo reale, mostrando da quale parte del "fiume" si trovano i vari attori.
+Usa docker `network inspect` su entrambe le sponde per recuperare la lista dei container presenti. Stampa poi una tabella visuale aggiornata in tempo reale, mostrando da quale parte del "fiume" si trovano i vari attori. 
+
+```bash
+local elementi_sinistra=$(docker network inspect "$SPONDA_1" --format '{{range .Containers}}{{.Name}} {{end}}' 2>/dev/null)
+local elementi_destra=$(docker network inspect "$SPONDA_2" --format '{{range .Containers}}{{.Name}} {{end}}' 2>/dev/null)
+
+...
+
+if echo "$elementi_sinistra" | grep -qw "$attore"; then
+   str_sinistra="$attore"
+fi
+
+# verifica se l'attore è a destra
+if echo "$elementi_destra" | grep -qw "$attore"; then
+    str_destra="$attore"
+fi
+
+# stampa la riga per l'attore corrente
+printf "%-18s ${BLUE}~~~~~~~~~${RESET} %-18s\n" "$str_sinistra" "$str_destra"
+```
