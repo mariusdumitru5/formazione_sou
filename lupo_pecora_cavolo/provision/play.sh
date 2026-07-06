@@ -254,7 +254,7 @@ disegna_fiume() {
     printf "\n${BLUE}=================================================${RESET}\n"
     printf "${YELLOW}               STATO DEL FIUME                   ${RESET}\n"
     printf "${BLUE}=================================================${RESET}\n"
-    printf "%-18s ${BLUE}~~~~~~~~~${RESET} %-18s\n" "SINISTRA" "DESTRA"
+    printf "%-18s ${BLUE}~~~~~~~~~${RESET} %18s\n" "SINISTRA" "DESTRA"
     printf "${BLUE}-------------------------------------------------${RESET}\n"
 
     # Array con tutti gli attori
@@ -275,7 +275,7 @@ disegna_fiume() {
         fi
 
         # stampa la riga per l'attore corrente
-        printf "%-18s ${BLUE}~~~~~~~~~${RESET} %-18s\n" "$str_sinistra" "$str_destra"
+        printf "%-18s ${BLUE}~~~~~~~~~${RESET} %18s\n" "$str_sinistra" "$str_destra"
     done
     printf "${BLUE}=================================================${RESET}\n\n"
 }
@@ -318,5 +318,4 @@ done
 
 printf "${RED}\n=================== GAME OVER ===================${RESET}\n"
 printf "${RED}Non hai aiutato il contadino a finire il suo lavoro${RESET}\n" "$sponda_da_controllare"
-printf "${RED}La pecora ha mangiato il cavolo poi è stata mangiata dal lupo.${RESET}\n"
 printf "${RED}=================================================${RESET}\n\n"
