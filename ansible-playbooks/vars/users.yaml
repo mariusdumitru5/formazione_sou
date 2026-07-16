@@ -1,0 +1,20 @@
+---
+
+users:
+  marius:
+    state: present 
+    groups: sudo
+    append: true
+    home: /home/marius 
+    shell: /bin/bash
+    password: "{{ marius_psw }}"
+    update_password: always
+  tom:
+    state: present 
+    groups: sudo
+    append: true
+    home: /home/tom
+    shell: /bin/bash
+    password: "{{ tom_psw }}"
+    update_password: always
+  

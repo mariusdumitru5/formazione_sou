@@ -1,0 +1,16 @@
+---
+
+packages:
+  curl:
+    state: present 
+  apache2:
+    state: present 
+  ca-certificates:
+    state: present 
+  vim:
+    state: absent 
+  git:
+    state: absent 
+  figlet:
+    state: present
+   

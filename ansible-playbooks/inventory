@@ -1,0 +1,5 @@
+[server]
+node1 ansible_host=192.168.6.67 ansible_user=vagrant ansible_private_key_file=~/.ssh/ansible 
+
+[client]
+node2 ansible_host=192.168.6.68 ansible_user=vagrant ansible_private_key_file=~/.ssh/ansible 

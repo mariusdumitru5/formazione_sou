@@ -1,0 +1,78 @@
+---
+
+- hosts: server client
+  become: true 
+  vars_files:
+    - vars/packages.yaml 
+    - vars/users.yaml
+    - vars/env_vars.yaml
+    - vars/vault.yaml
+  vars:
+    users_whitelist:
+      - marius
+      - tom
+      - vagrant
+  tasks:
+    
+    - name: Gestione pacchetti 
+      ansible.builtin.apt:
+        name: "{{ item.key }}"
+        state: "{{ item.value.state }}"
+        update_cache: true
+      loop: "{{ packages | dict2items }}"
+
+    - name: Gestione utenti
+      ansible.builtin.user:
+        name: "{{  item.key }}"
+        state: "{{ item.value.state }}"
+        groups: "{{ item.value.groups }}"
+        append: "{{ item.value.append }}"
+        home: "{{ item.value.home }}"
+        shell: "{{ item.value.shell }}"
+        password: "{{ item.value.password | password_hash('sha512')}}"
+        update_password: "{{ item.value.update_password }}"
+      loop: "{{ users | dict2items }}"
+
+    - name: Gestione ambiente  
+      ansible.builtin.lineinfile:
+        path: /etc/security/limits.conf 
+        regexp: "^{{ env[env_name | default('dev')].target_user }}\\s+{{ item }}\\s+nofile"
+        line: "{{ env[env_name | default('dev')].target_user }}    {{ item }}    nofile    {{ env[env_name | default('dev')].max_open_files }}"
+        state: present
+        insertafter: EOF # append a fine file
+      loop:
+        - soft
+        - hard
+    
+    - name: Gestione whitelist permessi utente 
+      ansible.builtin.blockinfile: 
+        path: /etc/security/access.conf
+        # ho messo # perché nulla macchina di test tutto il file è commentato 
+        insertbefore: "^#-\\s*:\\s*ALL\\s*:\\s*ALL"
+        block: |
+          {% for user in users_whitelist %}
+          + : {{ user }} : ALL
+          {% endfor %}
+
+    - name: Avvia apache2
+      ansible.builtin.systemd:
+        name: apache2
+        state: started
+        enabled: true 
+    
+    - name: Gestione Template 
+      ansible.builtin.template:
+        src: templates/index.html.j2
+        dest: /var/www/html/index.html
+        owner: vagrant
+        group: vagrant 
+        mode: '0644' 
+      notify: "restart-web"
+    
+  handlers:
+    - name: riavvia il server apache2
+      ansible.builtin.systemd:
+        name: apache2
+        state: reloaded
+      listen: "restart-web"
+  

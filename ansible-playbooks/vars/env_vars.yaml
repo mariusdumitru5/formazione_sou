@@ -1,0 +1,9 @@
+---
+
+env:
+  prod: 
+    target_user: "vagrant"
+    max_open_files: 10000
+  dev:
+    target_user: "vagrant"
+    max_open_files: 1000
