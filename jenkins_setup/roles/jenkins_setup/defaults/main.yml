@@ -1,0 +1,8 @@
+#SPDX-License-Identifier: MIT-0
+---
+# defaults file for jenkins_setup
+
+# docker network config 
+docker_network_name: "jenkins_network"
+docker_subnet: "172.20.0.0/16" # rete privata diversa da quella delle vm
+docker_master_ip: "172.20.0.10"

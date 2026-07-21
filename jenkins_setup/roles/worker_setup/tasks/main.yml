@@ -1,0 +1,34 @@
+#SPDX-License-Identifier: MIT-0
+---
+# tasks file for worker_setup
+
+- name: Caricare i segreti cifrati dal Vault
+  ansible.builtin.include_vars: vault.yml
+
+- name: Creare la directory di lavoro per l'agente Jenkins sul server ospitante
+  ansible.builtin.file:
+    path: /home/vagrant/jenkins_agent_data
+    state: directory
+    owner: vagrant
+    group: vagrant
+    mode: '0755'
+  when: "'worker' in group_names"
+
+
+- name: Avviare il container Jenkins Inbound Agent tramite Docker
+  community.docker.docker_container:
+    name: jenkins_agent
+    image: jenkins/inbound-agent:latest
+    state: started
+    restart_policy: always
+    user: "root"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /home/vagrant/jenkins_agent_data:/home/jenkins
+    env:
+      JENKINS_URL: "{{ jenkins_master_url }}/"
+      JENKINS_SECRET: "{{ jenkins_agent_secret }}"
+      JENKINS_AGENT_NAME: "{{ jenkins_agent_name }}"
+      JENKINS_WEB_SOCKET: "true" 
+  when: "'worker' in group_names"
+

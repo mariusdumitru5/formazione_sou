@@ -1,0 +1,8 @@
+#SPDX-License-Identifier: MIT-0
+---
+# defaults file for worker_setup
+
+# dati ambiente 
+jenkins_master_url: "http://192.168.7.20:8080"
+jenkins_agent_name: "rocky-linux-worker"
+jenkins_agent_secret: "{{ vault_jenkins_agent_secret }}"

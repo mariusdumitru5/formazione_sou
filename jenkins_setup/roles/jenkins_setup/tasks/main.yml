@@ -1,0 +1,61 @@
+#SPDX-License-Identifier: MIT-0
+---
+# tasks file for jenkins_setup
+
+- name: Installo pip3
+  ansible.builtin.dnf:
+    name: python3-pip
+    state: present
+  when: "'master' in group_names" 
+
+- name: Installare il pacchetto python docker
+  ansible.builtin.pip:
+    name: docker
+    state: present
+  when: "'master' in group_names" 
+
+- name: Creare una rete docker con una subnet specifica
+  community.docker.docker_network:
+    name: "{{ docker_network_name }}"
+    driver: bridge
+    ipam_config:
+      - subnet: "{{ docker_subnet }}"
+    state: present
+  when: "'master' in group_names" 
+
+- name: Avvio container con jenkins master sulla rete creata prima
+  community.docker.docker_container:
+    name: jenkins_master
+    image: jenkins/jenkins:lts
+    state: started
+    restart_policy: always
+    published_ports:
+      - "8080:8080"
+      - "50000:50000"
+    networks:
+      - name: "{{ docker_network_name }}"
+        ipv4_address: "{{ docker_master_ip }}"
+    volumes:
+      - jenkins_home:/var/jenkins_home
+  when: "'master' in group_names" 
+
+- name: Attendo che jenkins si avvii e generi la password 
+  ansible.builtin.pause:
+    seconds: 15
+  when: "'master' in group_names" 
+
+- name: Recupero la password iniziale di amministrazione dal container
+  ansible.builtin.command: docker exec jenkins_master cat /var/jenkins_home/secrets/initialAdminPassword
+  register: jenkins_password_output
+  become: true 
+  changed_when: false
+  when: "'master' in group_names" 
+
+- name: Password admin di Jenkins
+  ansible.builtin.debug:
+    msg: 
+      - "=========================================================="
+      - " LA PASSWORD INIZIALE DI JENKINS È:"
+      - " {{ jenkins_password_output.stdout }}"
+      - "=========================================================="
+  when: "'master' in group_names" 

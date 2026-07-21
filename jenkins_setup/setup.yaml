@@ -1,0 +1,9 @@
+---
+- name: Configura i server
+  hosts: all
+  become: true
+  roles:
+    - role: install_docker
+    - role: jenkins_setup
+    - role: worker_setup
+  

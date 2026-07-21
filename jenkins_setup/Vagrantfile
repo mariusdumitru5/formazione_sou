@@ -1,0 +1,20 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+Vagrant.configure("2") do |config|
+  config.vm.box = "generic/rocky9"
+  
+  config.vm.define "master" do |master|
+    master.vm.hostname = "master"
+    master.vm.network :private_network, ip: "192.168.7.20"
+    master.vm.network "forwarded_port", guest: 8080, host: 8080, id: "jenkins"
+    master.vm.network "forwarded_port", guest: 50000, host: 50001, id:  "tunnel"
+  end
+
+   config.vm.define "worker" do |worker|
+    worker.vm.hostname = "worker"
+    worker.vm.network :private_network, ip: "192.168.7.21" 
+    worker.vm.network "forwarded_port", guest: 80, host: 6767, id: "web"
+    worker.vm.network "forwarded_port", guest: 50000, host: 50000, id: "tunnel"
+  end
+end
