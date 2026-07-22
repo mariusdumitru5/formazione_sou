@@ -15,20 +15,30 @@
   when: "'worker' in group_names"
 
 
+
 - name: Avviare il container Jenkins Inbound Agent tramite Docker
   community.docker.docker_container:
     name: jenkins_agent
-    image: jenkins/inbound-agent:latest
+    image: jenkins/inbound-agent:latest-alpine-jdk21 
     state: started
     restart_policy: always
     user: "root"
     volumes:
+      # Passo il socket per i comandi
       - /var/run/docker.sock:/var/run/docker.sock
-      - /home/vagrant/jenkins_agent_data:/home/jenkins
+      # Passo i dati dell'agente
+      - /home/vagrant/jenkins_agent_data:/home/jenkins:z
+
     env:
       JENKINS_URL: "{{ jenkins_master_url }}/"
       JENKINS_SECRET: "{{ jenkins_agent_secret }}"
       JENKINS_AGENT_NAME: "{{ jenkins_agent_name }}"
       JENKINS_WEB_SOCKET: "true" 
+    entrypoint: 
+      - "/bin/sh"
+      - "-c"
+      - "apk add --no-cache docker-cli docker-cli-buildx && /usr/local/bin/jenkins-agent"
   when: "'worker' in group_names"
+
+
 

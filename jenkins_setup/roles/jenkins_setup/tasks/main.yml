@@ -49,6 +49,7 @@
   register: jenkins_password_output
   become: true 
   changed_when: false
+  failed_when: false # evita che il playbook si blocchi se il file è stato eliminato
   when: "'master' in group_names" 
 
 - name: Password admin di Jenkins
@@ -58,4 +59,15 @@
       - " LA PASSWORD INIZIALE DI JENKINS È:"
       - " {{ jenkins_password_output.stdout }}"
       - "=========================================================="
-  when: "'master' in group_names" 
+  # mostra il messaggio solo se il file esisteva e la lettura è andata a buon fine
+  when: 
+    - "'master' in group_names"
+    - jenkins_password_output.rc == 0
+
+- name: Avviso se il setup è già stato completato
+  ansible.builtin.debug:
+    msg: "Il file initialAdminPassword non esiste più. Il primo setup è già stato completato."
+  # mostra questo avviso se il comando docker exec è fallito (codice di ritorno diverso da 0)
+  when: 
+    - "'master' in group_names"
+    - jenkins_password_output.rc != 0
