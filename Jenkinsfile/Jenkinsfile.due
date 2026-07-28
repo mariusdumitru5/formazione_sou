@@ -1,0 +1,29 @@
+pipeline {
+    agent { label 'rocky-linux-worker' }
+    parameters {
+        choice (
+           name: 'ENVIRONMENT', 
+           choices: ['DEVELOPMENT', 'PRODUCTION'], 
+           description: 'Seleziona l\'ambiente per la pipeline'
+        )
+    }
+
+    stages {
+        stage('PRODUCTION') {
+            when {
+                 environment name: 'ENVIRONMENT', value: 'PRODUCTION'
+            }
+            steps {
+                echo "Sono nell'ambiente di Produzione"
+            }
+        }
+        stage('DEVELOPMENT') {
+           when {
+                 environment name: 'ENVIRONMENT', value: 'DEVELOPMENT'
+            }
+            steps {
+                echo "Sono nell'ambiente di DEVELOPMENT"
+            }
+        }
+    }
+}
